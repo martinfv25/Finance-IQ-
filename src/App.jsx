@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Chat from "./Chat";
 import StudyTools from "./StudyTools";
 import Library from "./Library";
@@ -8,16 +8,27 @@ import WaitlistModal from "./WaitlistModal";
 
 export default function App() {
   const [tab, setTab] = useState("chat");
-  const [showWaitlist, setShowWaitlist] = useState(true);
-  const [waitlistDone, setWaitlistDone] = useState(false);
-  const [profileUser, setProfileUser] = useState(null); // null = no profile open
-  const [library, setLibrary] = useState([]); // shared library state
+  const [profileUser, setProfileUser] = useState(null);
+  const [library, setLibrary] = useState([]);
 
-  const profile = {
-    name: "Martin",
-    email: "martinfurias@gmail.com",
+  // ── localStorage: remember if user already signed up ──────────
+  const saved = JSON.parse(localStorage.getItem("financeiq_user") || "null");
+  const [showWaitlist, setShowWaitlist] = useState(!saved);
+  const [waitlistDone, setWaitlistDone] = useState(false);
+  const [profile, setProfile] = useState(saved || {
+    name: "Guest",
+    email: "",
     exam: { id: "cfa1", label: "CFA Level 1" },
+  });
+
+  const handleSignup = (userData) => {
+    // Save to localStorage so next visit skips the modal
+    localStorage.setItem("financeiq_user", JSON.stringify(userData));
+    setProfile(userData);
+    setWaitlistDone(true);
   };
+
+  const handleClose = () => setShowWaitlist(false);
 
   const tabs = ["chat", "study", "library", "community"];
 
@@ -95,8 +106,8 @@ export default function App() {
       {showWaitlist && (
         <WaitlistModal
           done={waitlistDone}
-          onSubmit={() => setWaitlistDone(true)}
-          onClose={() => setShowWaitlist(false)}
+          onSubmit={handleSignup}
+          onClose={handleClose}
         />
       )}
     </>
