@@ -1245,7 +1245,6 @@ function WaitlistModal({ done, onSubmit }) {
               Name: name,
               Email: email,
               Exam: examLabel,
-              Date: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
             }
           }]
         }),
