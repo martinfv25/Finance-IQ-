@@ -665,6 +665,9 @@ export default function FinanceAI() {
   const [questionCount, setQuestionCount] = useState(0);
   const [limitReached, setLimitReached] = useState(false);
 
+  // ── Cheat Sheet Mode ───────────────────────────────────────────
+  const [cheatMode, setCheatMode] = useState(false);
+
   const [messages, setMessages] = useState([]);
   const [streamingMsg, setStreamingMsg] = useState("");
   const [input, setInput] = useState("");
@@ -714,7 +717,8 @@ export default function FinanceAI() {
     const base = SYSTEM_PROMPT;
     const addon = exam ? `\n\nUSER EXAM PROFILE:\n${EXAM_SYSTEM_ADDENDUM[exam.id] || ""}` : "";
     const docAddon = uploadedDoc ? `\n\nThe student has uploaded their official curriculum PDF: "${uploadedDoc.name}". Reference it directly when answering.` : "";
-    return base + addon + docAddon;
+    const cheatAddon = cheatMode ? `\n\nCHEAT SHEET MODE: The student wants a cheat sheet. Structure your response as a clean 1-page reference: title, key formulas with variable definitions, bullet-point concepts, and one exam tip. Keep it tight and scannable.` : "";
+    return base + addon + docAddon + cheatAddon;
   };
 
   // ── Screen routing ──
@@ -812,6 +816,7 @@ export default function FinanceAI() {
       const finalReply = accumulated || "Sorry, I couldn't generate a response.";
       setMessages(prev => [...prev, { role: "assistant", content: finalReply }]);
       setStreamingMsg("");
+      setCheatMode(false); // reset cheat mode after response
 
       // ── Increment question count ─────────────────────────────────
       const newCount = questionCount + 1;
@@ -1205,6 +1210,8 @@ export default function FinanceAI() {
             limitReached={limitReached}
             questionCount={questionCount}
             questionLimit={QUESTION_LIMIT}
+            cheatMode={cheatMode}
+            setCheatMode={setCheatMode}
           />
         </div>
       </div>
@@ -1446,7 +1453,7 @@ function WaitlistModal({ done, onSubmit, onClose }) {
 }
 
 
-function AnimatedInputArea({ input, setInput, onSend, onKey, loading, uploadedDoc, setUploadedDoc, fileInputRef, uploadLoading, handleFileUpload, budgetExceeded, limitReached, questionCount, questionLimit }) {
+function AnimatedInputArea({ input, setInput, onSend, onKey, loading, uploadedDoc, setUploadedDoc, fileInputRef, uploadLoading, handleFileUpload, budgetExceeded, limitReached, questionCount, questionLimit, cheatMode, setCheatMode }) {
   const [isFocused, setIsFocused] = useState(false);
   const [isHoveringBtn, setIsHoveringBtn] = useState(false);
   const textareaRef = useRef(null);
@@ -1516,6 +1523,24 @@ function AnimatedInputArea({ input, setInput, onSend, onKey, loading, uploadedDo
         </div>
       )}
 
+      {/* Cheat mode amber indicator */}
+      {cheatMode && (
+        <div style={{ marginBottom: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: "8px",
+            background: "#111", border: "1px solid #f0c040",
+            borderRadius: "5px", padding: "6px 14px",
+            fontFamily: "var(--font-mono)", fontSize: "12px",
+            color: "#f0c040", letterSpacing: "0.5px",
+            textShadow: "0 0 6px #f0c04080",
+          }}>
+            <span style={{ display: "inline-block", width: "6px", height: "6px", borderRadius: "50%", background: "#f0c040", animation: "blink 1s step-end infinite" }} />
+            GENERATE PDF CHEAT SHEET
+          </div>
+          <button onClick={() => setCheatMode(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "13px", color: "var(--muted)" }}>×</button>
+        </div>
+      )}
+
       {/* Main animated input card */}
       <div style={{
         background: "var(--surface)",
@@ -1574,6 +1599,29 @@ function AnimatedInputArea({ input, setInput, onSend, onKey, loading, uploadedDo
               <span style={{ fontSize: "15px" }}>{uploadLoading ? "⏳" : "📎"}</span>
               <span>{uploadedDoc ? "PDF attached" : "Attach PDF"}</span>
             </button>
+
+            {/* Cheat Sheet Generator button */}
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => setCheatMode(!cheatMode)}
+                disabled={budgetExceeded || limitReached}
+                title="Generate a PDF cheat sheet from your next prompt"
+                style={{
+                  display: "flex", alignItems: "center", gap: "5px",
+                  padding: "6px 10px", borderRadius: "8px", fontWeight: "500",
+                  fontSize: "12px", fontFamily: "var(--font-sans)", cursor: "pointer",
+                  transition: "all 0.15s",
+                  border: cheatMode ? "1px solid #f0c040" : "none",
+                  background: cheatMode ? "#111" : "transparent",
+                  color: cheatMode ? "#f0c040" : "var(--muted)",
+                }}
+                onMouseEnter={e => { if (!cheatMode) { e.currentTarget.style.background = "var(--background)"; e.currentTarget.style.color = "var(--foreground)"; }}}
+                onMouseLeave={e => { if (!cheatMode) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--muted)"; }}}
+              >
+                <span style={{ fontSize: "13px" }}>📄</span>
+                <span>Cheat sheet generator</span>
+              </button>
+            </div>
           </div>
 
           {/* Right: send button */}
