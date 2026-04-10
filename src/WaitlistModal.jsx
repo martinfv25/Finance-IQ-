@@ -32,7 +32,7 @@ export default function WaitlistModal({ done, onSubmit, onClose }) {
         body: JSON.stringify({ records: [{ fields: { Name: name, Email: email, Exam: examLabel } }] }),
       });
       if (!res.ok) throw new Error("Airtable error");
-      onSubmit();
+      onSubmit({ name, email, exam: examLabel, examId: exam, joinedAt: new Date().toLocaleDateString() });
     } catch { setError("Something went wrong. Please try again."); }
     finally { setSubmitting(false); }
   };
