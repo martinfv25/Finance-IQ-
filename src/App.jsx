@@ -1210,10 +1210,10 @@ function WaitlistModal({ done, onSubmit }) {
   const [hoveredExam, setHoveredExam] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // ── Airtable config ──────────────────────────────────────────
-  const AIRTABLE_TOKEN = "patJBDTQbwEuuDwJu.3b4ad553b5d5e2580568573b64615740d2555c8ce305cc71ebc2dfc56645fbda";
-  const AIRTABLE_BASE  = "apptNfG2EYyTYcyz7";
-  const AIRTABLE_TABLE = "tblXhB4LyvDOCj851";
+  // ── Airtable config (uses Vercel environment variables) ─────────
+  const AIRTABLE_TOKEN = import.meta.env.VITE_AIRTABLE_TOKEN;
+  const AIRTABLE_BASE  = import.meta.env.VITE_AIRTABLE_BASE;
+  const AIRTABLE_TABLE = import.meta.env.VITE_AIRTABLE_TABLE;
 
   const exams = [
     { id: "cfa1", label: "CFA Level 1" },
