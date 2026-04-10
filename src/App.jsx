@@ -1214,6 +1214,7 @@ export default function FinanceAI() {
         <WaitlistModal
           done={waitlistDone}
           onSubmit={() => setWaitlistDone(true)}
+          onClose={() => setShowWaitlist(false)}
         />
       )}
     </>
@@ -1221,7 +1222,7 @@ export default function FinanceAI() {
 }
 
 // ── Beta Waitlist Modal ──────────────────────────────────────────
-function WaitlistModal({ done, onSubmit }) {
+function WaitlistModal({ done, onSubmit, onClose }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [exam, setExam] = useState("");
@@ -1420,7 +1421,7 @@ function WaitlistModal({ done, onSubmit }) {
             <div style={{ padding: "12px 16px", background: "#f0f4f9", borderRadius: "10px", fontSize: "12px", color: "#475569", lineHeight: 1.6 }}>
               In the meantime, feel free to <strong>explore a preview</strong> of the chat below — just note that full features will be available at launch.
             </div>
-            <button onClick={() => setShowWaitlist(false)}
+            <button onClick={onClose}
               style={{
                 marginTop: "20px", padding: "10px 28px",
                 background: "#1a56db", border: "none", borderRadius: "10px",
