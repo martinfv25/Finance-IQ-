@@ -660,6 +660,11 @@ export default function FinanceAI() {
   const [showWaitlist, setShowWaitlist] = useState(true);
   const [waitlistDone, setWaitlistDone] = useState(false);
 
+  // ── Beta Question Limit ────────────────────────────────────────
+  const QUESTION_LIMIT = 5;
+  const [questionCount, setQuestionCount] = useState(0);
+  const [limitReached, setLimitReached] = useState(false);
+
   const [messages, setMessages] = useState([]);
   const [streamingMsg, setStreamingMsg] = useState("");
   const [input, setInput] = useState("");
@@ -731,6 +736,12 @@ export default function FinanceAI() {
     const userText = text || input.trim();
     if (!userText || loading) return;
 
+    // ── Beta question limit check ────────────────────────────────
+    if (questionCount >= QUESTION_LIMIT) {
+      setLimitReached(true);
+      return;
+    }
+
     // ── Budget Safety Check ──────────────────────────────────────
     // Add ~¼ token per char estimate for the new message
     const estimatedInputTokens = Math.ceil(userText.length / 4);
@@ -801,6 +812,11 @@ export default function FinanceAI() {
       const finalReply = accumulated || "Sorry, I couldn't generate a response.";
       setMessages(prev => [...prev, { role: "assistant", content: finalReply }]);
       setStreamingMsg("");
+
+      // ── Increment question count ─────────────────────────────────
+      const newCount = questionCount + 1;
+      setQuestionCount(newCount);
+      if (newCount >= QUESTION_LIMIT) setLimitReached(true);
 
       // ── Track tokens used this session (rough estimate) ──────────
       sessionTokensUsed.current += Math.ceil((userText.length + finalReply.length) / 4);
@@ -1186,6 +1202,9 @@ export default function FinanceAI() {
             uploadLoading={uploadLoading}
             handleFileUpload={handleFileUpload}
             budgetExceeded={budgetExceeded}
+            limitReached={limitReached}
+            questionCount={questionCount}
+            questionLimit={QUESTION_LIMIT}
           />
         </div>
       </div>
@@ -1401,7 +1420,7 @@ function WaitlistModal({ done, onSubmit }) {
             <div style={{ padding: "12px 16px", background: "#f0f4f9", borderRadius: "10px", fontSize: "12px", color: "#475569", lineHeight: 1.6 }}>
               In the meantime, feel free to <strong>explore a preview</strong> of the chat below — just note that full features will be available at launch.
             </div>
-            <button onClick={() => { /* closes modal but chat stays locked */ }}
+            <button onClick={() => setShowWaitlist(false)}
               style={{
                 marginTop: "20px", padding: "10px 28px",
                 background: "#1a56db", border: "none", borderRadius: "10px",
@@ -1426,7 +1445,7 @@ function WaitlistModal({ done, onSubmit }) {
 }
 
 
-function AnimatedInputArea({ input, setInput, onSend, onKey, loading, uploadedDoc, setUploadedDoc, fileInputRef, uploadLoading, handleFileUpload, budgetExceeded }) {
+function AnimatedInputArea({ input, setInput, onSend, onKey, loading, uploadedDoc, setUploadedDoc, fileInputRef, uploadLoading, handleFileUpload, budgetExceeded, limitReached, questionCount, questionLimit }) {
   const [isFocused, setIsFocused] = useState(false);
   const [isHoveringBtn, setIsHoveringBtn] = useState(false);
   const textareaRef = useRef(null);
@@ -1449,6 +1468,35 @@ function AnimatedInputArea({ input, setInput, onSend, onKey, loading, uploadedDo
 
   return (
     <div style={{ padding: "12px 0 20px", borderTop: "1px solid var(--border-light)", position: "relative" }}>
+
+      {/* Question limit reached banner */}
+      {limitReached && (
+        <div style={{
+          marginBottom: "12px", padding: "14px 18px",
+          background: "linear-gradient(135deg, #1a56db 0%, #1e3a8a 100%)",
+          borderRadius: "12px", textAlign: "center",
+        }}>
+          <div style={{ fontSize: "18px", marginBottom: "6px" }}>🎓</div>
+          <div style={{ fontSize: "14px", fontWeight: "700", color: "#fff", marginBottom: "4px" }}>
+            You've reached the beta preview limit!
+          </div>
+          <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.8)", lineHeight: 1.5 }}>
+            You used all {questionLimit} preview questions. Full unlimited access is coming at launch — we'll email you when it's ready!
+          </div>
+        </div>
+      )}
+
+      {/* Question counter */}
+      {!limitReached && questionCount > 0 && (
+        <div style={{ marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+          <div style={{ flex: 1, height: "3px", background: "var(--border-light)", borderRadius: "2px", overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${(questionCount / questionLimit) * 100}%`, background: "var(--primary)", borderRadius: "2px", transition: "width 0.3s" }} />
+          </div>
+          <span style={{ fontSize: "11px", color: "var(--muted)", fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>
+            {questionCount}/{questionLimit} preview questions used
+          </span>
+        </div>
+      )}
 
       {/* Budget warning */}
       {budgetExceeded && (
@@ -1488,8 +1536,8 @@ function AnimatedInputArea({ input, setInput, onSend, onKey, loading, uploadedDo
             onKeyDown={onKey}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            disabled={budgetExceeded}
-            placeholder={budgetExceeded ? "Session limit reached — please refresh." : uploadedDoc ? `Ask about "${uploadedDoc.name}"...` : "Ask anything about finance, economics, or your exam..."}
+            disabled={budgetExceeded || limitReached}
+            placeholder={limitReached ? "Beta preview limit reached — full access coming at launch!" : budgetExceeded ? "Session limit reached — please refresh." : uploadedDoc ? `Ask about "${uploadedDoc.name}"...` : "Ask anything about finance, economics, or your exam..."}
             style={{
               width: "100%", border: "none", outline: "none", resize: "none",
               fontSize: "14px", fontFamily: "var(--font-sans)", lineHeight: "1.6",
@@ -1530,18 +1578,18 @@ function AnimatedInputArea({ input, setInput, onSend, onKey, loading, uploadedDo
           {/* Right: send button */}
           <button
             onClick={() => onSend()}
-            disabled={loading || !input.trim() || budgetExceeded}
+            disabled={loading || !input.trim() || budgetExceeded || limitReached}
             onMouseEnter={() => setIsHoveringBtn(true)}
             onMouseLeave={() => setIsHoveringBtn(false)}
             style={{
               display: "flex", alignItems: "center", gap: "6px",
               padding: "8px 16px", borderRadius: "10px", border: "none",
-              background: input.trim() && !budgetExceeded ? "var(--primary)" : "var(--border-light)",
-              color: input.trim() && !budgetExceeded ? "#fff" : "var(--muted-light)",
+              background: input.trim() && !budgetExceeded && !limitReached ? "var(--primary)" : "var(--border-light)",
+              color: input.trim() && !budgetExceeded && !limitReached ? "#fff" : "var(--muted-light)",
               fontSize: "13px", fontWeight: "600", fontFamily: "var(--font-sans)",
-              cursor: loading || !input.trim() || budgetExceeded ? "not-allowed" : "pointer",
+              cursor: loading || !input.trim() || budgetExceeded || limitReached ? "not-allowed" : "pointer",
               transition: "all 0.15s",
-              transform: isHoveringBtn && input.trim() && !budgetExceeded ? "translateY(-1px)" : "translateY(0)",
+              transform: isHoveringBtn && input.trim() && !budgetExceeded && !limitReached ? "translateY(-1px)" : "translateY(0)",
               boxShadow: isHoveringBtn && input.trim() && !budgetExceeded ? "0 4px 12px rgba(26,86,219,0.25)" : "none",
             }}
           >
