@@ -1208,6 +1208,12 @@ function WaitlistModal({ done, onSubmit }) {
   const [exam, setExam] = useState("");
   const [error, setError] = useState("");
   const [hoveredExam, setHoveredExam] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // ── Airtable config ──────────────────────────────────────────
+  const AIRTABLE_TOKEN = "patJBDTQbwEuuDwJu.3b4ad553b5d5e2580568573b64615740d2555c8ce305cc71ebc2dfc56645fbda";
+  const AIRTABLE_BASE  = "apptNfG2EYyTYcyz7";
+  const AIRTABLE_TABLE = "tblXhB4LyvDOCj851";
 
   const exams = [
     { id: "cfa1", label: "CFA Level 1" },
@@ -1218,14 +1224,45 @@ function WaitlistModal({ done, onSubmit }) {
     { id: "other",label: "Other / General" },
   ];
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name.trim()) { setError("Please enter your name."); return; }
     if (!/\S+@\S+\.\S+/.test(email)) { setError("Please enter a valid email."); return; }
     if (!exam) { setError("Please select your exam."); return; }
     setError("");
-    // In production: POST to your backend/Supabase here
-    console.log("Waitlist signup:", { name, email, exam });
-    onSubmit();
+    setSubmitting(true);
+
+    try {
+      const examLabel = exams.find(e => e.id === exam)?.label || exam;
+      const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE}/${AIRTABLE_TABLE}`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${AIRTABLE_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          records: [{
+            fields: {
+              Name: name,
+              Email: email,
+              Exam: examLabel,
+              Date: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+            }
+          }]
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err?.error?.message || "Airtable error");
+      }
+
+      onSubmit();
+    } catch (err) {
+      setError("Something went wrong. Please try again.");
+      console.error(err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -1332,18 +1369,18 @@ function WaitlistModal({ done, onSubmit }) {
               )}
 
               {/* Submit */}
-              <button onClick={handleSubmit} style={{
-                width: "100%", padding: "13px", background: "#1a56db",
+              <button onClick={handleSubmit} disabled={submitting} style={{
+                width: "100%", padding: "13px", background: submitting ? "#93c5fd" : "#1a56db",
                 border: "none", borderRadius: "12px", color: "#fff",
-                fontSize: "14px", fontWeight: "700", cursor: "pointer",
+                fontSize: "14px", fontWeight: "700", cursor: submitting ? "not-allowed" : "pointer",
                 fontFamily: "var(--font-sans)", letterSpacing: "0.2px",
                 boxShadow: "0 4px 14px rgba(26,86,219,0.3)",
                 transition: "all 0.15s",
               }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#1e3a8a"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "#1a56db"; e.currentTarget.style.transform = "translateY(0)"; }}
+                onMouseEnter={e => { if (!submitting) e.currentTarget.style.background = "#1e3a8a"; }}
+                onMouseLeave={e => { if (!submitting) e.currentTarget.style.background = "#1a56db"; }}
               >
-                Join the Waitlist →
+                {submitting ? "Saving..." : "Join the Waitlist →"}
               </button>
 
               <p style={{ textAlign: "center", fontSize: "11px", color: "#94a3b8", marginTop: "12px" }}>
