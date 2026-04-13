@@ -11,7 +11,8 @@
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "katex": "^0.16.9"
+    "katex": "^0.16.9",
+    "node-fetch": "^2.6.9"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.0",
