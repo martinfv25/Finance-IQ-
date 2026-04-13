@@ -1,4 +1,4 @@
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -9,7 +9,6 @@ module.exports = async function handler(req, res) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return res.status(500).json({ error: "No API key" });
 
-  // Parse body manually
   const buffers = [];
   for await (const chunk of req) buffers.push(chunk);
   const body = JSON.parse(Buffer.concat(buffers).toString());
@@ -48,6 +47,6 @@ module.exports = async function handler(req, res) {
     }
     res.end();
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 }
